@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "s4-bp-mcp": {
+      "type": "http",
+      "url": "https://s4-bp-mcp.cfapps.ap10.hana.ondemand.com/mcp"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "welcomeFile": "/health",
+  "authenticationMethod": "route",
+  "routes": [
+    {
+      "source": "^/mcp(.*)",
+      "target": "/mcp$1",
+      "destination": "mcp-backend",
+      "authenticationType": "xsuaa",
+      "csrfProtection": false
+    },
+    {
+      "source": "^/health$",
+      "target": "/health",
+      "destination": "mcp-backend",
+      "authenticationType": "none"
+    }
+  ]
+}

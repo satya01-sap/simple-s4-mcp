@@ -1,0 +1,14 @@
+{
+  "name": "s4-bp-mcp-approuter",
+  "version": "1.0.0",
+  "description": "App Router for S4 Business Partner MCP server",
+  "scripts": {
+    "start": "node node_modules/@sap/approuter/approuter.js"
+  },
+  "dependencies": {
+    "@sap/approuter": "^16.7.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

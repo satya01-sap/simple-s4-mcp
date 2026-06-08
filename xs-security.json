@@ -1,0 +1,29 @@
+{
+  "xsappname": "simples4bpmcp",
+  "tenant-mode": "shared",
+  "scopes": [
+    {
+      "name": "$XSAPPNAME.call",
+      "description": "Permission to call the Business Partner MCP tool"
+    }
+  ],
+  "role-templates": [
+    {
+      "name": "MCP_User",
+      "description": "Can invoke MCP Business Partner tool",
+      "scope-references": ["$XSAPPNAME.call"]
+    }
+  ],
+  "role-collections": [
+    {
+      "name": "S4_BP_MCP_User",
+      "description": "Users allowed to query Business Partners via MCP",
+      "role-template-references": ["$XSAPPNAME.MCP_User"]
+    }
+  ],
+  "oauth2-configuration": {
+    "token-validity": 3600,
+    "refresh-token-validity": 43200,
+    "redirect-uris": ["https://*.cfapps.*.hana.ondemand.com/**"]
+  }
+}

@@ -1,0 +1,106 @@
+_schema-version: "3.1"
+ID: simple-s4-mcp
+description: MCP server for SAP Business Partner (S/4HANA on-premise via principal propagation)
+version: 1.0.0
+
+# ──────────────────────────────────────────────
+# BUILD PARAMETERS (global)
+# ──────────────────────────────────────────────
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm ci
+        - npm run build
+
+# ──────────────────────────────────────────────
+# MODULES
+# ──────────────────────────────────────────────
+modules:
+
+  # ── 1. MCP Server (internal only, no public route) ──────────────────────────
+  - name: s4-bp-mcp-server
+    type: nodejs
+    path: .
+    parameters:
+      memory: 512M
+      instances: 1
+    # no-route: true
+      routes:
+        - route: s4-bp-mcp-server.apps.internal   # reachable only within CF space
+    build-parameters:
+      builder: custom
+      commands: []            # npm ci + npm run build already done in before-all
+      supported-platforms: [CF]
+    properties:
+      DESTINATION_NAME: S4_ONPREM_PP
+      SAP_CLIENT: "100"
+      NODE_ENV: production
+    requires:
+      - name: s4-bp-mcp-xsuaa
+      - name: s4-bp-mcp-destination
+      - name: s4-bp-mcp-connectivity
+      - name: s4-bp-mcp-logging
+    provides:
+      - name: s4-bp-mcp-server-api
+        properties:
+          mcp-backend-url: ${default-url}   # resolved to internal URL at deploy time
+
+  # ── 2. App Router (public entry point, handles XSUAA login redirect) ─────────
+  - name: s4-bp-mcp-approuter
+    type: approuter.nodejs
+    path: approuter
+    parameters:
+      memory: 256M
+      instances: 1
+      routes:
+        - route: s4-bp-mcp.${default-domain}
+    build-parameters:
+      builder: npm
+      supported-platforms: [CF]
+    properties:
+      TENANT_HOST_PATTERN: "^(.*)-s4-bp-mcp\\..*"
+      # Injects backend URL from MCP server module; App Router reads this as
+      # the "destinations" env var to forward authenticated requests.
+      destinations: >
+        [{"name":"mcp-backend","url":"https://s4-bp-mcp-server.apps.internal","forwardAuthToken":true}]
+    requires:
+      - name: s4-bp-mcp-xsuaa
+      - name: s4-bp-mcp-server-api
+
+# ──────────────────────────────────────────────
+# RESOURCES (BTP managed service instances)
+# ──────────────────────────────────────────────
+resources:
+
+  # XSUAA — issues JWT on login, performs SAMLBearerAssertion token exchange
+  - name: s4-bp-mcp-xsuaa
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      config:
+        xsappname: simples4bpmcp   # unique per CF org/space
+        tenant-mode: shared
+
+  # Destination Service — resolves S4_ONPREM_PP destination at runtime
+  - name: s4-bp-mcp-destination
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: destination
+      service-plan: lite
+
+  # Connectivity Service — routes on-premise traffic via Cloud Connector tunnel
+  - name: s4-bp-mcp-connectivity
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: connectivity
+      service-plan: lite
+
+  # Application Logging Service — structured logs visible in Kibana / BTP logging
+  - name: s4-bp-mcp-logging
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: application-logs
+      service-plan: lite
